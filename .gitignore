@@ -3,3 +3,9 @@ data/*
 paper/*
 /figures/
 src/*.mat
+credentials.json
+sql/odds_series.csv
+sql/odds_series_b.csv
+sql/odds_series.csv.gz
+sql/odds_series_b.csv.gz
+text.txt
