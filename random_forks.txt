@@ -1,0 +1,8 @@
+Random successful forks:
+
+match_id	league	match_date	home_team	home_score	away_team	away_score	avg_odds_home_win	avg_odds_draw	avg_odds_away_win	max_odds_home_win	max_odds_draw	max_odds_away_win	top_bookie_home_win	top_bookie_draw	top_bookie_away_win	n_odds_home_win	n_odds_draw	n_odds_away_win	min_ch_home	min_ch_draw	min_ch_away	sum_min_chances	fork
+675954	Italy: Serie A	2013-04-27	Atalanta	1	Bologna	1	2.7222	2.3289	3.7248	2.88	2.95	4.0	bet365	Betway	bet-at-home	27	27	27	0.3472222222222222	0.3389830508474576	0.25	0.9362052730696798	1
+549239	Argentina: Primera Division	2011-10-03	Colon Santa FE	1	Estudiantes L.P.	1	2.6418	3.05	2.61	3.05	3.24	3.2	Pinnacle Sports	Pinnacle Sports	Coral	28	28	28	0.3278688524590164	0.30864197530864196	0.3125	0.9490108277676583	1
+842122	Armenia: Premier League	2015-03-01	Ararat Yerevan	2	Shirak Gyumri	4	3.6425	3.466	1.902	4.0	4.5	3.6	10Bet	Tipico	Tipico	20	20	20	0.25	0.2222222222222222	0.2777777777777778	0.75	1
+768969	Spain: Superliga Women	2014-04-27	Huelva W	2	Barcelona W	1	7.624	5.51	1.2673	9.0	6.0	1.65	BetVictor	bet365	Jetbull	15	15	15	0.1111111111111111	0.16666666666666666	0.6060606060606061	0.8838383838383839	1
+440722	Portugal: Primeira Liga	2010-04-05	Naval	2	Benfica	4	8.5807	4.4441	1.637	10.73	5.09	9.5	Pinnacle Sports	12BET	bwin	27	27	27	0.09319664492078285	0.19646365422396858	0.10526315789473684	0.3949234570394883	1

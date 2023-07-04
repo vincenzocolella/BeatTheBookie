@@ -1,77 +1,91 @@
-## I valori sono sballati e non riesco a salvarlo come dataframe e quindi csv file.
+import csv
+import itertools
+import os
+import urllib3
+import json
+import requests
+# Creazione del payload
+payload = {
+    "offerId" : "0"
+}
 
-from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-import time
-import pandas as pd
+# Conversione del payload in formato JSON
+payload_json = json.dumps(payload)
 
-url = 'https://www.sisal.it/scommesse-matchpoint/sport/calcio'
-webdriver = webdriver.Chrome()
-webdriver.get(url)
-
-# Wait for the events to appear on the page
-wait = WebDriverWait(webdriver, 30)
-events_locator = (By.CLASS_NAME, 'text-capitalize')
-wait.until(EC.presence_of_element_located(events_locator))
-#time.sleep(15)
-# Define the initial scroll height
-last_height = webdriver.execute_script("return document.body.scrollHeight")
-
-# Infinite scroll down
-SCROLL_PAUSE_TIME = 0.5
-while True:
-    # Scroll down to bottom
-    webdriver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-
-    # Wait to load page
-    time.sleep(SCROLL_PAUSE_TIME)
-
-    # Calculate new scroll height and compare with last scroll height
-    new_height = webdriver.execute_script("return document.body.scrollHeight")
-    if new_height == last_height:
-        break
-    last_height = new_height
+# Creazione dell'oggetto `PoolManager` di urllib3
+http = urllib3.PoolManager()
 
 
+params = {"offerId": "0"}
+headers = {
+    "Accept": "*/*",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "Dnt": "1",
+    "Host": "betting.sisal.it",
+    "Origin": "https://www.sisal.it",
+    "Pragma": "no-cache",
+    "Referer": "https://www.sisal.it/",
+    "Sec-Ch-Ua": "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Google Chrome\";v=\"114\"",
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": "\"Windows\"",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+    "User_data": "{\"accountId\":null,\"token\":null,\"tokenJWT\":null,\"locale\":\"it_IT\",\"loggedIn\":false,\"channel\":62,\"brandId\":175,\"offerId\":0}"
+}
 
-# Parse the page source
-#soup = BeautifulSoup(webdriver.page_source[206634:], 'lxml')
-soup = BeautifulSoup(webdriver.page_source, 'lxml')
 
+# Effettuare la richiesta POST
+url = "https://betting.sisal.it/api/lettura-palinsesto-sport/palinsesto/prematch/top-match/1?offerId=0"
+#response = http.request('POST', url, body=payload_json, headers=headers)
 
+response = requests.get(url, headers=headers, params=params)
 
-# Extract team names
-team_spans = soup.find_all('span', {'class': 'd-block text-capitalize'})
-team_names = [span.text for span in team_spans]
-print(team_names)
-# Extract odds
-odds = soup.find_all('div', {'class': 'selectionButton_selectionPrice__B-6jq'})
+if response.status_code == 200:
+    response_data = response.json()
+    # salva la risposta in un file di testo
+    with open("response_data.txt", "w") as f:
+        json.dump(response_data, f)
+else:
+    print(f"Errore nella richiesta: {response.status_code} - {response.reason}")
+    
+if response.status_code == 200:
+    response_data = response.json()
 
-data = [odd.text.strip() for odd in odds]
-print(data)
+data=response_data
+    # Prepare CSV file
+csv_file = "data/sisal_data.csv"
+fieldnames = ["Home","Away","1","X","2"]
 
-data_trimmed = data[5:]
+# Extract and save data to CSV
+with open(csv_file, mode="w", newline="") as file:
+    writer = csv.DictWriter(file, fieldnames=fieldnames)
+    writer.writeheader()
 
-print(data_trimmed)
-#data2 = [data_trimmed[i:i+6] for i in range(0, len(data_trimmed), 6)]
-
-data_final = data_trimmed
-print(data_final)
-
-for i in range(0, len(team_names), 2):
-    team1 = team_names[i]
-    team2 = team_names[i+1]
-    team_data = data_trimmed[i*5:(i+1)*5]
-    data_final.append((team1, team2, team_data))
-
-print(data_final)
-data_final = data_final.reshape((145, 7))
-df = pd.DataFrame(data_final, columns=['Home', 'Away', 'Home win', 'Tie', 'Away win', 'Under', 'Over'])
-
-# Write the DataFrame to a CSV file
-df.to_csv('data/sisal_data.csv', index=False)
-
-print("Data saved to CSV file.")
+    for key, value in data["scommessaMap"].items():
+        try:
+            teams = value["descrizioneAvvenimento"].split(" - ")
+            team1 = teams[0]
+            team2 = teams[1]
+            new_key = key + "-0"
+            esito_list = data["infoAggiuntivaMap"][new_key]["esitoList"]
+            print(esito_list)
+            odds_1 = next(esito["quota"] for esito in esito_list if esito["codiceEsito"] == 1)
+            odds_x = next(esito["quota"] for esito in esito_list if esito["codiceEsito"] == 2)
+            odds_2 = next(esito["quota"] for esito in esito_list if esito["codiceEsito"] == 3)
+        except:
+            continue
+        
+        writer.writerow({
+                "Home": team1,
+                "Away": team2,
+                "1": odds_1/100,
+                "X": odds_x/100,
+                "2": odds_2/100
+        })
+        
+print(f"Data saved to '{csv_file}' successfully.")

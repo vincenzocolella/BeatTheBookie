@@ -1,57 +1,81 @@
-## Funziona ma prende poche righe, max 8
+import csv
+import itertools
+import os
+import urllib3
+import json
 
-from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
-import time
-import pandas as pd
+# Creazione del payload
+payload = {
+    "betAliasUrl": "1x2",
+    "disciplineAliasUrl": "calcio",
+    "live": 0,
+    "oddFilterType": "LTE",
+    "oddValue": "150",
+    "prematch": 1
+}
 
-url = 'https://www.eurobet.it/it/scommesse/#!'
-webdriver = webdriver.Chrome()
-webdriver.get(url)
+# Conversione del payload in formato JSON
+payload_json = json.dumps(payload)
 
-# Wait for the events to appear on the page
-wait = WebDriverWait(webdriver, 30)
-events_locator = (By.CLASS_NAME, 'event-row')
-wait.until(EC.presence_of_element_located(events_locator))
-#time.sleep(15)
-# Define the initial scroll height
-last_height = webdriver.execute_script("return document.body.scrollHeight")
+# Creazione dell'oggetto `PoolManager` di urllib3
+http = urllib3.PoolManager()
 
-# Infinite scroll down
-SCROLL_PAUSE_TIME = 0.5
-while True:
-    # Scroll down to bottom
-    webdriver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+# Definizione degli header
+headers = {
+    "Accept": "application/json, text/plain, */*",
+    "Content-Type": "application/json;charset=UTF-8",
+    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+    "X-Eb-Accept-Language": "it_IT",
+    "X-Eb-Marketid": "5",
+    "X-Eb-Platformid": "2",
+    "Referer": "https://www.eurobet.it/it/scommesse/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+    "Origin": "https://www.eurobet.it"
+}
 
-    # Wait to load page
-    time.sleep(SCROLL_PAUSE_TIME)
+# Effettuare la richiesta POST
+url = "https://www.eurobet.it/search-service/sport-schedule/services/search/event/odd-filter"
+response = http.request('POST', url, body=payload_json, headers=headers)
 
-    # Calculate new scroll height and compare with last scroll height
-    new_height = webdriver.execute_script("return document.body.scrollHeight")
-    if new_height == last_height:
-        break
-    last_height = new_height
+# Ottenere la risposta
+response_data = response.data.decode('utf-8')
+response_json = json.loads(response_data)
+# Definisci i valori per le colonne
+valori = []
+home=[]
+ospite=[]
+one=[]
+x=[]
+two=[]
 
-# Parse the page source
-soup = BeautifulSoup(webdriver.page_source, 'lxml')
-print(soup.prettify())  # Add this line to check the page source
-events = soup.find_all('div', {'class': 'event-row'})
-print(len(events))  # Add this line to check the number of events
-# Process the events
-data = []
-for event in events:
-    team_names = event.find('div', {'class': 'event-players'}).text.strip().split(' - ')
-    odds = event.find_all('div', {'class': 'quota-new'})
-    odds_values = [odd.find('a').text for odd in odds]
-    row = team_names + odds_values
-    data.append(row)
+# Esegui l'iterazione su ogni elemento nel JSON
+for item in response_json['result']:
+    # Verifica se la stringa "manchester city" è presente nel valore
+    for elem in item['itemList']:
+        home.append(elem['eventInfo']['teamHome']['description'])
+        ospite.append(elem['eventInfo']['teamAway']['description'])
+        x12 = 0
+        for val in elem["betGroupList"][0]['oddGroupList'][0]['oddList']:
+            numero = int(val['oddValue']) /100
+            numero = f"{numero:.2f}"
+            if x12 ==0:
+                one.append(numero)
+            elif x12 == 1:
+                x.append(numero)
+            else:
+                two.append(numero)
+            x12+=1
 
-# Create a DataFrame from the data and define the column names
-df = pd.DataFrame(data, columns=['Home', 'Away', 'Home win', 'Tie', 'Away win', 'Under', 'Over'])
+# Scrivi i valori su file CSV
+directory = 'data'
+if not os.path.exists(directory):
+    os.makedirs(directory)
 
-# Write the DataFrame to an Excel file
-with pd.ExcelWriter('data/eurobet_data.xlsx') as writer:
-    df.to_excel(writer, index=False)
+file_path = os.path.join(directory, 'eurobet_data.csv')
+
+with open(file_path, 'w', newline='') as file:
+    writer = csv.writer(file, delimiter=";")
+    writer.writerow(["Home", "Away", "1", "X", "2"])
+    for row in zip(home, ospite, one, x, two):
+        writer.writerow(row)
+    print("I valori sono stati scritti nel file CSV.")
